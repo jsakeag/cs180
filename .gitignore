@@ -9,3 +9,9 @@ raw/
 
 # Assignment source code
 code/
+
+# gradescope submission artifacts
+submission/
+*.zip
+page.pdf
+*.md
