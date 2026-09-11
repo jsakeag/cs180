@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proj1: Images of the Russian Empire | CS180</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<div class="site-header-wrap">
+  <header class="site-header">
+    <a class="logo" href="../index.html">cs180</a>
+    <nav class="site-nav">
+      <a class="pill" href="../index.html">Home</a>
+      <a class="pill" href="../proj0/index.html">Project 0</a>
+      <a class="pill active" href="index.html">Project 1</a>
+    </nav>
+  </header>
+</div>
+
+<div class="article-hero">
+  <div class="tags">
+    <span class="tag">Computer Vision</span>
+    <span class="tag">Image Alignment</span>
+  </div>
+  <h1>Images of the Russian Empire</h1>
+  <p class="excerpt">
+    Automatically colorizing Sergei Prokudin-Gorskii's century-old glass plate negatives by
+    aligning their red, green, and blue exposures.
+  </p>
+  <p class="article-meta">Keagan Aromin <span class="dot"></span> Project 1 <span class="dot"></span> September 2026</p>
+</div>
+
+<div class="hero-image">
+  <img src="images/church_out.jpg" alt="Colorized Prokudin-Gorskii photo of a church on a lake">
+</div>
+
+<main>
+
+  <p class="prompt lead">
+    Sergei Prokudin-Gorskii photographed the Russian Empire from 1907 to 1915, taking over a thousand photos each 
+    with a red, green, and blue filter. The digitized versions we have today are strips of photos with the blue, green, and red
+    photos stacked on top of each other. The issue is that they're in grayscale, and they're slightly misaligned. So for this project, 
+    I split each into thirds, applied the color filter, and found the pixel shift that aligns them back into one colored image.
+  </p>
+
+  <section id="approach" class="part">
+    <h2>Approach</h2>
+
+    <h3>Alignment metric chosen: NCC (Normalized Cross-Correlation)</h3>
+    <p class="prompt">
+      We score each candidate shift by cross-correlating the mean-subtracted, L2-normalized channels. The shift with the highest score wins. We choose this over Euclidian Distance (pure L2 norm) because it's more unaffected by the differing brightness of the images, and weighs similarity more heavily.
+    </p>
+    
+    <h3>Approach for larger images: Recursive Pyramid</h3>
+    <p class="prompt">
+      For the full-resolution .tif scans (&sim;3200&times;3700px per channel) I
+      built a recursive image pyramid. I downsampled the images by half using a 2x2 block average, repeating until a small "base case"
+      of at most 50 pixels wide on any dimension. I then aligned at that tiny base resolution, then bubbled upwards while refining the shift with a small +/-2px search to correct rounding error from upsampling.
+      This turned an intractable full-resolution search into a logarithmic number of cheaper, tinier searches, reducing runtime to seconds.
+    </p>
+
+  <section id="results" class="part">
+    <h2>Initial Results</h2>
+    <p class="prompt">All three small JPEGs aligned cleanly! There wasn't much misalignment, and we knew that because there was no blur between any two color channels. </p>
+
+    <div class="gallery">
+      <figure>
+        <img src="images/cathedral_out.jpg" alt="Colorized cathedral" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption><strong>cathedral</strong> &middot; G <code>(5, 2)</code>, R <code>(12, 3)</code>, 0.45s</figcaption>
+      </figure>
+      <figure>
+        <img src="images/monastery_out.jpg" alt="Colorized monastery" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption><strong>monastery</strong> &middot; G <code>(-3, 2)</code>, R <code>(3, 2)</code>, 0.44s</figcaption>
+      </figure>
+      <figure>
+        <img src="images/tobolsk_out.jpg" alt="Colorized tobolsk" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption><strong>tobolsk</strong> &middot; G <code>(3, 3)</code>, R <code>(6, 3)</code>, 0.45s</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="pyramid" class="part">
+    <h2>Pyramid Results</h2>
+    <p class="prompt">
+      Applying the same search algorithm but with a recursive pyramid for larger images. I ran it on the 14 images provided plus the 3 I chose and almost all came out clean!
+    </p>
+
+    <div class="gallery">
+      <figure><img src="images/church_out.jpg" alt="Colorized church" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>church</strong></figcaption></figure>
+      <figure><img src="images/harvesters_out.jpg" alt="Colorized harvesters" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>harvesters</strong></figcaption></figure>
+      <figure><img src="images/icon_out.jpg" alt="Colorized icon" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>icon</strong></figcaption></figure>
+      <figure><img src="images/ilemselga_out.jpg" alt="Colorized ilemselga" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>ilemselga</strong></figcaption></figure>
+      <figure><img src="images/melons_out.jpg" alt="Colorized melons" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>melons</strong></figcaption></figure>
+      <figure><img src="images/religous_painting_out.jpg" alt="Colorized religious painting" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>religious_painting</strong></figcaption></figure>
+      <figure><img src="images/self_portrait_out.jpg" alt="Colorized self portrait" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>self_portrait</strong></figcaption></figure>
+      <figure><img src="images/siren_out.jpg" alt="Colorized siren (lilacs)" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>siren</strong></figcaption></figure>
+      <figure><img src="images/three_generations_out.jpg" alt="Colorized three generations" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>three_generations</strong></figcaption></figure>
+      <figure><img src="images/wharf_out.jpg" alt="Colorized wharf" onerror="this.closest('figure').classList.add('missing')"><figcaption><strong>wharf</strong></figcaption></figure>
+      <figure>
+        <img src="images/new1_out.jpg" alt="Grain sacks warehouse, own selection 1" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption><strong>warehouse interior*</strong></figcaption>
+      </figure>
+      <figure>
+        <img src="images/new2_out.jpg" alt="Cathedral rooftop spires, own selection 2" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption><strong>cathedral rooftop*</strong></figcaption>
+      </figure>
+      <figure>
+        <img src="images/new3_out.jpg" alt="Tree and pasture, own selection 3" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption><strong>tree & pasture*</strong></figcaption>
+      </figure>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Method</th>
+            <th>Shift G (dy, dx)</th>
+            <th>Shift R (dy, dx)</th>
+            <th>Size (channel)</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>cathedral</td><td><span class="badge badge-single">single</span></td><td><code>(5, 2)</code></td><td><code>(12, 3)</code></td><td>341&times;390</td><td>0.45s</td></tr>
+          <tr><td>monastery</td><td><span class="badge badge-single">single</span></td><td><code>(-3, 2)</code></td><td><code>(3, 2)</code></td><td>341&times;391</td><td>0.44s</td></tr>
+          <tr><td>tobolsk</td><td><span class="badge badge-single">single</span></td><td><code>(3, 3)</code></td><td><code>(6, 3)</code></td><td>341&times;396</td><td>0.45s</td></tr>
+          <tr><td>church</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(25, 4)</code></td><td><code>(58, -4)</code></td><td>3202&times;3634</td><td>12.68s</td></tr>
+          <tr><td>harvesters</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(60, 17)</code></td><td><code>(124, 14)</code></td><td>3218&times;3683</td><td>12.4s</td></tr>
+          <tr><td>icon</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(41, 17)</code></td><td><code>(89, 23)</code></td><td>3244&times;3741</td><td>12.9s</td></tr>
+          <tr><td>ilemselga</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(40, 7)</code></td><td><code>(130, 11)</code></td><td>3270&times;3800</td><td>13.43s</td></tr>
+          <tr><td>melons</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(81, 10)</code></td><td><code>(178, 14)</code></td><td>3241&times;3770</td><td>12.71s</td></tr>
+          <tr><td>religious_painting</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(28, 3)</code></td><td><code>(68, 7)</code></td><td>3193&times;3742</td><td>12.72s</td></tr>
+          <tr><td>self_portrait</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(79, 29)</code></td><td><code>(176, 37)</code></td><td>3251&times;3810</td><td>12.91s</td></tr>
+          <tr><td>siren</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(49, -6)</code></td><td><code>(96, -25)</code></td><td>3250&times;3817</td><td>13.43s</td></tr>
+          <tr><td>three_generations</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(52, 14)</code></td><td><code>(111, 11)</code></td><td>3209&times;3714</td><td>12.65s</td></tr>
+          <tr><td>wharf</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(15, -7)</code></td><td><code>(82, -16)</code></td><td>3244&times;3761</td><td>13.18s</td></tr>
+          <tr><td>emir <span class="badge badge-fail">misaligned</span></td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(49, 24)</code></td><td><code>(190, -428)</code></td><td>3209&times;3702</td><td>13.2s</td></tr>
+          <tr><td>warehouse interior*</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(53, 25)</code></td><td><code>(123, 17)</code></td><td>3212&times;3713</td><td>12.62s</td></tr>
+          <tr><td>cathedral rooftop*</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(57, 13)</code></td><td><code>(125, 24)</code></td><td>3260&times;3751</td><td>12.81s</td></tr>
+          <tr><td>tree & pasture*</td><td><span class="badge badge-pyramid">pyramid</span></td><td><code>(78, 17)</code></td><td><code>(154, 8)</code></td><td>3244&times;3781</td><td>13.08s</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="failures" class="part">
+    <h2>Conclusion</h2>
+    <p class="prompt">
+      Across all 17 images in the table above, 16 aligned cleanly and all in a matter of seconds
+      regardless of image size due to our pyramid search. <code>emir</code> is the only image
+      that did not align, most likely because the robes in the image show up across all the blue, green, and red filters with 
+      different patterns and leave NCC unable to find a shared structure.
+    </p>
+  </section>
+</main>
+
+<footer>
+  <p>Keagan Aromin &middot; CS180 Project 1 &middot; September 2026</p>
+</footer>
+
+</body>
+</html>

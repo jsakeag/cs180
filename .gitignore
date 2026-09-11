@@ -1,0 +1,11 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Original HEIC captures kept locally as backups, not needed for the site
+raw/
+
+# Assignment source code
+code/

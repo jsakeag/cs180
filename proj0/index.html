@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proj0: Becoming Friends with Your Camera | CS180</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<div class="site-header-wrap">
+  <header class="site-header">
+    <a class="logo" href="../index.html">cs180</a>
+    <nav class="site-nav">
+      <a class="pill" href="../index.html">Home</a>
+      <a class="pill active" href="index.html">Project 0</a>
+      <a class="pill" href="../proj1/index.html">Project 1</a>
+    </nav>
+  </header>
+</div>
+
+<div class="article-hero">
+  <div class="tags">
+    <span class="tag">Photography</span>
+    <span class="tag">Perspective</span>
+  </div>
+  <h1>Becoming Friends with Your Camera</h1>
+  <p class="excerpt">
+    Here's how camera distance and focal length decide what a photo actually looks like...
+  </p>
+  <p class="article-meta">Keagan Aromin <span class="dot"></span> Project 0 <span class="dot"></span> September 2026</p>
+</div>
+
+<div class="hero-image">
+  <img class="gif" src="images/part3/dolly_zoom.gif" alt="Dolly zoom animated GIF of a Stitch plush toy">
+</div>
+
+<main>
+
+  <p class="prompt lead">
+    Every camera makes the same basic trade: how close you stand versus how much you zoom.
+    Standing close to a subject with a wide lens versus standing far with a zoomed-in lens changes the field of
+    view. The background, and specific features of the subject, stretch to different degrees!
+    For this project, we did three experiments to show and explore this effect.
+  </p>
+
+  <section id="part1" class="part">
+    <h2>1. Selfie: The Wrong Way vs. The Right Way</h2>
+    <p class="prompt">
+      A close-up selfie stretches out my nose and shrinks my ears. Stepping back and zooming in to match the framing keeps
+      that same nose-to-ear distance roughly constant compared to distance from the camera, so this "stretching" effect disappears.
+    </p>
+
+    <div class="compare">
+      <figure>
+        <img src="images/part1/close.jpg" alt="Close-up distorted selfie, 14mm ultra-wide" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>Up close, wide lens</figcaption>
+      </figure>
+      <figure>
+        <img src="images/part1/medium.jpg" alt="Selfie at medium distance, 24mm" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>Stepped back + zoomed</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="part2" class="part">
+    <h2>2. Architectural Perspective Compression</h2>
+    <p class="prompt">
+      I tried the same idea on this curved atrium ledge at The Gateway. From afar and zoomed,
+      (longer lens) the railings and ceiling arcs stack up and look almost flat. From close to the railing,
+      and zooming out (wider lens) the near edge of the railing is way closer to the camera than the far 
+      edge, so the curve stretches out.
+    </p>
+
+    <div class="compare">
+      <figure>
+        <img src="images/part2/zoomed_far.jpg" alt="Zoomed-in photo of atrium from far away, 77mm" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>Far away, zoomed in</figcaption>
+      </figure>
+      <figure>
+        <img src="images/part2/walked_close.jpg" alt="Wide-angle photo of atrium from close up, 14mm" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>Up close, no zoom</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="part3" class="part">
+    <h2>3. The Dolly Zoom</h2>
+    <p class="prompt">
+      For the dolly zoom I had my girlfied hold up a Stitch plush in my room, with a lamp and mirror in the
+      background. I walked the camera backward while zooming in across 7 photos, and the width of the background
+      changes as a result! The room behind him keeps compressing and creeping closer.
+    </p>
+
+    <div class="gif-wrap">
+      <img class="gif" src="images/part3/dolly_zoom.gif" alt="Dolly zoom animated GIF" onerror="this.closest('div').classList.add('missing')">
+    </div>
+
+    <h3 class="stills-heading">Individual stills</h3>
+    <div class="stills-grid">
+      <img src="images/part3/stills/01.jpg" alt="Dolly zoom still 1" onerror="this.style.display='none'">
+      <img src="images/part3/stills/02.jpg" alt="Dolly zoom still 2" onerror="this.style.display='none'">
+      <img src="images/part3/stills/03.jpg" alt="Dolly zoom still 3" onerror="this.style.display='none'">
+      <img src="images/part3/stills/04.jpg" alt="Dolly zoom still 4" onerror="this.style.display='none'">
+      <img src="images/part3/stills/05.jpg" alt="Dolly zoom still 5" onerror="this.style.display='none'">
+      <img src="images/part3/stills/06.jpg" alt="Dolly zoom still 6" onerror="this.style.display='none'">
+      <img src="images/part3/stills/07.jpg" alt="Dolly zoom still 7" onerror="this.style.display='none'">
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Keagan Aromin &middot; CS180 Project 0 &middot; September 2026</p>
+</footer>
+
+</body>
+</html>
