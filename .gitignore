@@ -4,14 +4,14 @@ __pycache__/
 .venv/
 venv/
 
-# Original HEIC captures kept locally as backups, not needed for the site
+# proj0 HEIC captures (backup)
 raw/
-
-# Assignment source code
-code/
 
 # gradescope submission artifacts
 submission/
+code/
+web/
 *.zip
-page.pdf
 *.md
+*.py
+*.pdf
