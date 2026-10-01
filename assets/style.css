@@ -397,6 +397,23 @@ figure figcaption code {
   color: var(--accent);
 }
 
+/* wide multi-panel figures (matplotlib output): show them whole, don't crop */
+figure.panel {
+  margin: 0 0 1.75rem;
+}
+
+figure.panel img {
+  aspect-ratio: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
 figure.missing {
   position: relative;
 }
