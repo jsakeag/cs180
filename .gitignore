@@ -15,3 +15,7 @@ web/
 *.md
 *.py
 *.pdf
+# course notebooks + saved spec pages (private)
+*.ipynb
+proj3a context/
+proj3b context/

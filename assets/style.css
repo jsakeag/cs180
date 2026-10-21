@@ -643,3 +643,9 @@ footer {
   font-size: 0.82rem;
   border-top: 1px solid var(--border);
 }
+
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 3rem 0;
+}

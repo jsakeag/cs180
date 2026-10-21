@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proj3A: Exploring the Power of Flow Models | CS180</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<div class="site-header-wrap">
+  <header class="site-header">
+    <a class="logo" href="../index.html">cs180</a>
+    <nav class="site-nav">
+      <a class="pill" href="../index.html">Home</a>
+      <a class="pill" href="../proj0/index.html">Project 0</a>
+      <a class="pill" href="../proj1/index.html">Project 1</a>
+      <a class="pill" href="../proj2/index.html">Project 2</a>
+      <a class="pill active" href="index.html">Project 3</a>
+    </nav>
+  </header>
+</div>
+
+<div class="article-hero">
+  <div class="tags">
+    <span class="tag">Generative Models</span>
+    <span class="tag">Flow Matching</span>
+    <span class="tag">Image Editing</span>
+  </div>
+  <h1>Exploring the Power of Flow Models</h1>
+  <p class="excerpt">
+    In this project, we did many things: denoise and generate image transitions, 
+    create visual anagrams, draw hybrid images, and last but not definitely least, we 
+    implemented flow matching!
+  </p>
+  <p class="article-meta">Keagan Aromin <span class="dot"></span> Project 3 <span class="dot"></span> October 2026</p>
+</div>
+
+<main>
+
+  <!-- ================================================================= -->
+  <section id="a1-1-3" class="part">
+    <h2>Interpolation & Naive Denoising</h2>
+    <p class="prompt">
+      First we had to implement the "interpolator" equation we learned from class:
+      \[ x_t = (1 - t)\,\epsilon + t\,x_1 \]
+      This allows us to shift between pure noise (picked from a Gaussian) and our actual input image. Here my input image was a burrito I had at El Farolito in SF:
+    </p>
+    <figure class="panel">
+      <img src="images/1_1_training_inputs.png" alt="Burrito photo and its noisy versions at t = 0.25, 0.50, and 0.75">
+    </figure>
+    <p class="prompt">
+      One of the naive approaches to denoising (and the classical way of doing it) is using a Gaussian blur. I implemented that first and here are the results:
+    </p>
+
+    <div class="stack">
+      <figure class="panel">
+        <img src="images/1_2_blur_t025.png" alt="Noisy input and Gaussian-blurred version at t = 0.25">
+      </figure>
+      <figure class="panel">
+        <img src="images/1_2_blur_t050.png" alt="Noisy input and Gaussian-blurred version at t = 0.50">
+      </figure>
+      <figure class="panel">
+        <img src="images/1_2_blur_t075.png" alt="Noisy input and Gaussian-blurred version at t = 0.75">
+      </figure>
+    </div>
+
+    <p class="prompt">The lowest blur strength with the least noise (trivially) worked the best because there wasn't too much noise to begin with. We had to adjust blur radius to match noise levels, and especially noisy images were still considerably distorted.</p>
+    <p class="prompt">
+      That leads us to our next approach: one-step denoising. Basically, if we put the noise image and clean image in vector space (and add t as a dimension), 
+      we can predict the "velocity vector" from our current position to the clean image. We can calculate the clean image using that velocity.
+    </p>
+
+    <div class="stack">
+      <figure class="panel">
+        <img src="images/1_3_one_step_t025.png" alt="Original, noisy input, and one-step estimate at t = 0.25">
+      </figure>
+      <figure class="panel">
+        <img src="images/1_3_one_step_t050.png" alt="Original, noisy input, and one-step estimate at t = 0.50">
+      </figure>
+      <figure class="panel">
+        <img src="images/1_3_one_step_t075.png" alt="Original, noisy input, and one-step estimate at t = 0.75">
+      </figure>
+    </div>
+
+    <p class="prompt">The result is a much less noisy image, although blur is leftover. The more noise, the more blurry the resulting image. We don't exactly have a way to "deblur" these images which is the issue.</p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="a1-4-5" class="part">
+    <h2>Visualizing Velocity & Euler Sampling</h2>
+    <p class="prompt">
+      To see what the model is actually doing in one-step denoising, we can visualize the velocity it predicts. The noise is
+      where we start and the clean image is where we want to end up, so the ground-truth velocity is just the difference between the two:
+      \[ v_{gt} = x_1 - \epsilon \]
+      I compared the model's update \( (1 - t)\,\hat{v}_t \) to the ground-truth update \( (1 - t)\,v_{gt} \), with an error map
+      showing the RMS difference over the RGB channels of each pixel. Here are the results:
+    </p>
+
+    <div class="stack">
+      <figure class="panel">
+        <img src="images/1_4_velocity_t025.png" alt="Noisy input, predicted update, ground-truth update, and error map at t = 0.25">
+      </figure>
+      <figure class="panel">
+        <img src="images/1_4_velocity_t050.png" alt="Noisy input, predicted update, ground-truth update, and error map at t = 0.50">
+      </figure>
+      <figure class="panel">
+        <img src="images/1_4_velocity_t075.png" alt="Noisy input, predicted update, ground-truth update, and error map at t = 0.75">
+      </figure>
+    </div>
+
+    <p class="prompt">The error is largest when the image is least denoised, i.e. t is low.</p>
+    <p class="prompt">
+      Since one big jump leaves us with a blurry image, the fix is to take lots of small steps instead. With Euler sampling we
+      step forward by \( h = 0.02 \) and predict a new velocity after every step:
+      \[ x_{t+h} = x_t + h\,v_\theta(x_t, t) \]
+      Starting from the \( t = 0.5 \) noisy burrito, here's the image every five steps:
+    </p>
+
+    <figure class="panel">
+      <img src="images/1_5_trajectory.png" alt="Euler trajectory from t = 0.50 to t = 1.00, every fifth update">
+    </figure>
+
+    <p class="prompt">And here's how it stacks up against the other two approaches on the same noisy input:</p>
+
+    <figure class="panel">
+      <img src="images/1_5_comparison.png" alt="Original, Gaussian blur, one-step estimate, and Euler result from the same t = 0.50 input">
+    </figure>
+
+    <p class="prompt">The resulting image has little (if any) noise and doesn't have the same blurring (now that I think about it, kind of vectorizing) effect that the one-step denoising had.</p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="a1-6" class="part">
+    <h2>Basic Image Generation</h2>
+    <p class="prompt">
+      If we start Euler sampling at pure noise (t=0), we can build new images from scratch; this is what we got from the notebook. 
+      Some faces and bodies are deformed or missing features which is a bit creepy...
+    </p>
+
+    <figure class="panel">
+      <img src="images/1_6_samples.png" alt="Five samples generated from noise with the prompt a high quality photo">
+    </figure>
+  </section>
+  <section id="a2-1" class="part">
+    <h2>Better Image Generation (CFG)</h2>
+    <p class="prompt">
+      To get better images, we can use classifier-free guidance. Basically, we predict the velocity once with our
+      prompt and another time with an empty prompt. The difference is how much the prompt
+      changes the velocity, so we can scale w to push further in that direction.
+      I used \( w = 7 \) and the same five starting noises, and we got similar people with imperfect but much less creepy looking faces:
+    </p>
+
+    <figure class="panel">
+      <img src="images/2_1_cfg_samples.png" alt="Five CFG samples with w = 7 from the same noises as Part 1.6">
+    </figure>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ================================================================= -->
+  <section id="a3-1" class="part">
+    <h2>Image-to-Image Generation</h2>
+    <p class="prompt">
+      Cool! Now if we add the same noise to an image that already exists we can use CFG to "morph" between the generated noise and
+      our image. This creates a trippy "transition image" between the two. A lower \( t_{start} \) means more initial noise and thus a more imaginary image.
+      We ranged it from 0.02 to 0.5 for this project.
+    </p>
+
+    <div class="stack">
+      <figure class="panel">
+        <img src="images/3_1_campanile.png" alt="Campanile edits at starting times 0.02 through 0.50" onerror="this.closest('figure').classList.add('missing')">
+      </figure>
+      <figure class="panel">
+        <img src="images/3_1_my_image_1.png" alt="Burrito edits at starting times 0.02 through 0.50" onerror="this.closest('figure').classList.add('missing')">
+      </figure>
+      <figure class="panel">
+        <img src="images/3_1_my_image_2.png" alt="Mountain edits at starting times 0.02 through 0.50" onerror="this.closest('figure').classList.add('missing')">
+      </figure>
+    </div>
+
+    <p class="prompt">
+      I tried it on a picture of the Eiffel Tower from the web:
+    </p>
+    <div class="stack">
+      <figure class="panel">
+        <img src="images/3_1_web_image.png" alt="Eiffel Tower web image edits at starting times 0.02 through 0.50">
+      </figure>
+    </div>
+    <p class="prompt">    And also on images that I drew myself. As you can see, it actually works better on images that aren't fully realistic but rather hand-drawn:</p>
+    <div>
+      <figure class="panel">
+        <img src="images/3_1_drawing_1.png" alt="Mountain drawing edits at starting times 0.02 through 0.50">
+      </figure>
+      <figure class="panel">
+        <img src="images/3_1_drawing_2.png" alt="Flower drawing edits at starting times 0.02 through 0.50">
+      </figure>
+    </div>
+
+    <p class="prompt">The start time is essentially an interpolator for how imaginary the resulting image is, versus how much it looks like our input image. It's less of a "cross dissolve" and more of a morphing between imaginary and reality.</p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="a3-2" class="part">
+    <h2>Better Image-to-Image Generation</h2>
+    <p class="prompt">
+      Now we include a prompt describing the edit we want (kind of like CFG!). \( t_{start} \) is now an interpolator between the version of this image influenced by the prompt and the original image. 
+      Here are a few example outputs:
+    </p>
+
+    <h3>"a photograph of a rocket on a launch pad"</h3>
+    <figure class="panel">
+      <img src="images/3_2_campanile.png" alt="Campanile edited toward a rocket on a launch pad at starting times 0.02 through 0.50">
+    </figure>
+
+    <h3>"turn the burrito into a sleeping pad in a tent"</h3>
+    <figure class="panel">
+      <img src="images/3_2_my_image_1.png" alt="Burrito edited toward a sleeping pad in a tent at starting times 0.02 through 0.50">
+    </figure>
+
+    <h3>"turn the mountain into a purple volcano with a pool of purple lava beneath it"</h3>
+    <figure class="panel">
+      <img src="images/3_2_my_image_2.png" alt="Mountain edited toward a purple volcano at starting times 0.02 through 0.50">
+    </figure>
+
+    <p class="prompt">The start time is once again an interpolator between our imaginary and real version.</p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="a3-3" class="part">
+    <h2>Application 1: Visual Anagrams</h2>
+    <p class="prompt">
+      In lecture we saw images that looked like two different things upside-down versus upside-up! In this project we implemented this
+      by applying one prompt, flipping the image and applying another prompt, then flipping the image back:
+
+      \[ v = \tfrac{1}{2}\left(v_{cfg}(x_t, p_1) + F\big(v_{cfg}(F(x_t), p_2)\big)\right) \]
+      Here are our results:
+    </p>
+
+    <figure class="panel">
+      <img src="images/3_3_anagram_1.png" alt="Visual anagram: old man upright, campfire when rotated 180 degrees">
+    </figure>
+
+    <figure class="panel">
+      <img src="images/3_3_anagram_2.png" alt="Visual anagram: snowy mountain village upright, horse when rotated 180 degrees">
+    </figure>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="a3-4" class="part">
+    <h2>Application 2: Hybrid Images</h2>
+    <p class="prompt">
+      In project 2, we made hybrid images by combining the low pass features of one with the high pass features of the other:
+      \[ v = f_{\text{lowpass}}(v_1) + f_{\text{highpass}}(v_2) \]
+      This created images that looked like one thing close up versus another far away. Here, we did the same with velocities instead of images:
+    </p>
+
+    <div class="compare">
+      <figure>
+        <img src="images/3_4_hybrid_1.png" alt="Hybrid image: waterfall up close">
+        <figcaption>Close: "a lithograph of a waterfall"</figcaption>
+      </figure>
+      <figure class="contain">
+        <img src="images/3_4_hybrid_1_distant.png" alt="Same hybrid shrunk to 64 by 64: skull from far away">
+        <figcaption>Distant: "a lithograph of a skull"</figcaption>
+      </figure>
+      <figure>
+        <img src="images/3_4_hybrid_2.png" alt="Hybrid image: forest up close">
+        <figcaption>Close: "a lithograph of a forest"</figcaption>
+      </figure>
+      <figure class="contain">
+        <img src="images/3_4_hybrid_2_distant.png" alt="Same hybrid shrunk to 64 by 64: cat from far away">
+        <figcaption>Distant: "a lithograph of a cat"</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ================================================================= -->
+  <!-- Part B: Flow Matching from Scratch                                 -->
+  <!-- ================================================================= -->
+  <section id="b1" class="part">
+    <h2>Building a Denoiser</h2>
+    <p class="prompt">
+      For Part B we built our own model from scratch and trained it on MNIST digits! First up we had to build a UNet, which shrinks the
+      28&times;28 image down to 14&times;14, 7&times;7, then 1&times;1, and grows it back up. On the way up it concatenates the
+      matching layer from the way down (skip connections), so it doesn't lose the details.
+    </p>
+    <p class="prompt">
+      To train it as a denoiser we need noisy inputs, which we make by adding Gaussian noise to a clean digit:
+      \[ z = x + \sigma\,\epsilon \]
+      Here's one digit with the noise level ranging from 0.0 to 1.0:
+    </p>
+    <figure class="panel">
+      <img src="images/partb/1_2_noise_levels.png" alt="One MNIST digit with noise sigma from 0.0 to 1.0">
+    </figure>
+    <p class="prompt">
+      We set \( \sigma = 0.5 \) then trained it for 5 epochs. We had to generate new noise per batch so that the model could generalize to different noise.
+      Here's a graph of our loss after each step:
+    </p>
+    <figure class="panel">
+      <img src="images/partb/1_2_1_loss.png" alt="Training loss curve for the sigma = 0.5 denoiser">
+    </figure>
+    <div class="stack">
+      <p class="prompt">
+        Here are the clean, noisy, and denoised digits (notice how more detail is preserved with more epochs):
+      </p>
+      <figure class="panel">
+        <img src="images/partb/1_2_1_denoise_epoch1.png" alt="Clean, noisy, and denoised test digits after epoch 1">
+      </figure>
+      <figure class="panel">
+        <img src="images/partb/1_2_1_denoise_epoch5.png" alt="Clean, noisy, and denoised test digits after epoch 5">
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="b1-limits" class="part">
+    <h2>Testing the Denoiser's Limits</h2>
+    <p class="prompt">
+      What happens with noise levels other than 0.5? The model preserves any extra noise as "smears" because it wasn't trained on it.
+    </p>
+    <figure class="panel">
+      <img src="images/partb/1_2_2_ood.png" alt="Noisy inputs at seven sigma values and the denoiser's outputs">
+    </figure>
+    <p class="prompt">
+      Now we test if a model can generate digits from pure noise, i.e. nothing...
+    </p>
+    <figure class="panel">
+      <img src="images/partb/1_2_3_loss.png" alt="Training loss curve for the pure-noise denoiser">
+    </figure>
+    <div class="stack">
+      <figure class="panel">
+        <img src="images/partb/1_2_3_pure_noise_epoch1.png" alt="Pure noise inputs and outputs after epoch 1">
+      </figure>
+      <figure class="panel">
+        <img src="images/partb/1_2_3_pure_noise_epoch5.png" alt="Pure noise inputs and outputs after epoch 5">
+      </figure>
+    </div>
+    <p class="prompt">Our result is sort of an average of all the digits in the dataset. As discussed many times in class and discussion it's because this is what minimizes the MSE of L2 loss.</p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ================================================================= -->
+  <section id="b2-time" class="part">
+    <h2>Flow Matching (Time-Conditioned)</h2>
+    <p class="prompt">
+      Just like in Part A, we can take lots of small steps instead of one big step. In our time-conditioned approach,
+      we mix a digit \( x_1 \) with noise \( x_0 \) at a random time \( t \) using the same interpolation
+      equation from Part A and train the UNet to predict the conditional flow, i.e.:
+      \[ x_1 - x_0 \]
+      Since the model needs to know how far along it is, we feed \( t \) in
+      through two small fully connected blocks that scale the UNet's middle layers. Here's the training loss over 10 epochs:
+    </p>
+    <figure class="panel">
+      <img src="images/partb/2_2_loss.png" alt="Training loss curve for the time-conditioned UNet">
+    </figure>
+    <p class="prompt">
+      To generate, we start from pure noise and take Euler steps from \( t = 0 \) to 1, same as Part A. Here are samples after
+      epochs 1, 5, and 10 (same starting noise each time):
+    </p>
+    <div class="stack">
+      <figure class="panel">
+        <img src="images/partb/2_3_time_epoch1.png" alt="Time-conditioned samples after epoch 1">
+      </figure>
+      <figure class="panel">
+        <img src="images/partb/2_3_time_epoch5.png" alt="Time-conditioned samples after epoch 5">
+      </figure>
+      <figure class="panel">
+        <img src="images/partb/2_3_time_epoch10.png" alt="Time-conditioned samples after epoch 10">
+      </figure>
+    </div>
+    <p class="prompt">The samples kind of look like scrambled eggs with less epochs, then become more sophisticated digits.</p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="b2-class" class="part">
+    <h2>Flow Matching (Class-Conditioned + CFG)</h2>
+    <p class="prompt">
+      To control which digit we get, we also can use class conditioning + CFG (but we need to use one-hot encoding since digits are categories
+      instead of amounts). 
+      \[ u = u_{\text{uncond}} + \gamma\,(u_{\text{cond}} - u_{\text{uncond}}) \]
+      We do this with two more fully connected blocks, and also drop the class during training 10% of the time
+      so the model trains on conditioned and unconditioned data. 
+      Here's the training loss:
+    </p>
+    <figure class="panel">
+      <img src="images/partb/2_5_class_loss.png" alt="Training loss curve for the class-conditioned UNet">
+    </figure>
+    <div class="stack">
+      <p>Here's class conditioned samples of each digit, each with \( \gamma = 5 \) and getting more clear after each epoch:</p>
+      <figure class="panel">
+        <img src="images/partb/2_6_class_epoch1.png" alt="Class-conditioned samples after epoch 1">
+      </figure>
+      <figure class="panel">
+        <img src="images/partb/2_6_class_epoch5.png" alt="Class-conditioned samples after epoch 5">
+      </figure>
+      <figure class="panel">
+        <img src="images/partb/2_6_class_epoch10.png" alt="Class-conditioned samples after epoch 10">
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="b2-nosched" class="part">
+    <h2>Why Don't We Need the Learning Rate Scheduler?</h2>
+    <p class="prompt">
+      To see if we could drop the scheduler, I trained a model with a constant learning rate of 1e-3 (the scheduler's minimum) and compared the results.
+      The only tradeoff is time because the model takes small steps at first during training but it works fine without it, and in fact the initial MSE was lower for the first epoch.
+    </p>
+    <figure class="panel">
+      <img src="images/partb/2_5_class_nosched_loss.png" alt="Training loss curve for the class-conditioned UNet without a scheduler">
+    </figure>
+    <div class="stack">
+      <figure class="panel">
+        <img src="images/partb/2_6_nosched_epoch1.png" alt="No-scheduler class-conditioned samples after epoch 1">
+      </figure>
+      <figure class="panel">
+        <img src="images/partb/2_6_nosched_epoch5.png" alt="No-scheduler class-conditioned samples after epoch 5">
+      </figure>
+      <figure class="panel">
+        <img src="images/partb/2_6_nosched_epoch10.png" alt="No-scheduler class-conditioned samples after epoch 10">
+      </figure>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Keagan Aromin &middot; CS180 Project 3 &middot; October 2026</p>
+</footer>
+
+</body>
+</html>
