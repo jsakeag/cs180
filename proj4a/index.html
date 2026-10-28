@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proj4A: Image Warping and Mosaicing | CS180</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<div class="site-header-wrap">
+  <header class="site-header">
+    <a class="logo" href="../index.html">cs180</a>
+    <nav class="site-nav">
+      <a class="pill" href="../index.html">Home</a>
+      <a class="pill" href="../proj0/index.html">Project 0</a>
+      <a class="pill" href="../proj1/index.html">Project 1</a>
+      <a class="pill" href="../proj2/index.html">Project 2</a>
+      <a class="pill" href="../proj3/index.html">Project 3</a>
+      <a class="pill active" href="index.html">Project 4</a>
+    </nav>
+  </header>
+</div>
+
+<div class="article-hero">
+  <div class="tags">
+    <span class="tag">Homographies</span>
+    <span class="tag">Image Warping</span>
+    <span class="tag">Mosaics</span>
+  </div>
+  <h1>Image Warping and Mosaicing</h1>
+  <p class="excerpt">
+    In this project we learned how to stitch panoramas together using homographies!
+  </p>
+  <p class="article-meta">Keagan Aromin <span class="dot"></span> Project 4A <span class="dot"></span> October 2026</p>
+</div>
+
+<main>
+
+  <!-- ================================================================= -->
+  <section id="a1" class="part">
+    <h2>Shooting the Pictures</h2>
+    <p class="prompt">
+      First, I shot these photos from my phone behind Li Ka Shing, Berkeley Way West, and Crescent Lawn. In class, we know that these form a homography because we're keeping the camera in one spot and taking photos which are a projective transform of one another.
+    </p>
+
+    <h3>Set 1</h3>
+    <figure class="panel">
+      <img src="images/a1_pano1_sources.jpg" alt="Source photos for mosaic 1" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <h3>Set 2</h3>
+    <figure class="panel">
+      <img src="images/a1_pano2_sources.jpg" alt="Source photos for mosaic 2" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <h3>Set 3</h3>
+    <figure class="panel">
+      <img src="images/a1_pano3_sources.jpg" alt="Source photos for mosaic 3" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="a2" class="part">
+    <h2>Recovering Homographies</h2>
+    <p class="prompt">
+      A homography maps a point \( (x, y) \) in one image to \( (x', y') \) in another:
+      \[
+        \begin{bmatrix} w x' \\ w y' \\ w \end{bmatrix} =
+        \begin{bmatrix} a & b & c \\ d & e & f \\ g & h & 1 \end{bmatrix}
+        \begin{bmatrix} x \\ y \\ 1 \end{bmatrix}
+      \]
+    </p>
+    <p class="prompt">
+      I did the algebra by dividing by w and isolating x' and y', yielding two linear equations. In matrix form:
+    </p>
+    <p class="prompt">
+      \[
+        \begin{bmatrix}
+          x & y & 1 & 0 & 0 & 0 & -x'x & -x'y \\
+          0 & 0 & 0 & x & y & 1 & -y'x & -y'y \\
+          & & & & \vdots & & &
+        \end{bmatrix}
+        \begin{bmatrix} a \\ b \\ c \\ d \\ e \\ f \\ g \\ h \end{bmatrix}
+        =
+        \begin{bmatrix} x' \\ y' \\ \vdots \end{bmatrix}
+      \]
+    </p>
+    <p class="prompt">
+      We have to use four or more points because in a projective transform, there are 8 degrees of freedom (four points times two variables yields this). I decided to do 10 for each image just for sanity and annotated them with a tool I built.
+    </p>
+
+    <figure class="panel">
+      <img src="images/a2_pano1_correspondences.jpg" alt="Clicked correspondences between two photos of set 1" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <p class="prompt">
+      Solving with least squares gives the homography from pano1-2 to pano1-3:
+      \[ H = \begin{bmatrix} 1.846 & -0.157 & -889.16 \\ 0.486 & 1.504 & -465.64 \\ 0.0006 & -0.0001 & 1 \end{bmatrix} \]
+    </p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="a3" class="part">
+    <h2>Warping the Images</h2>
+    <p class="prompt">
+      Inverse warping, as opposed to forward warping, is where we loop through pixels in the output and use linear interpolation to ask the question, where (softly) did this pixel valeu come from? We implemented this using a bounding box and an alpha max for pixels that didn't have a source pixel.
+    </p>
+
+    <h3>Nearest Neighbor vs. Bilinear</h3>
+    <figure class="panel">
+      <img src="images/a3_nn_vs_bilinear.jpg" alt="Zoomed crop of the same warp with nearest neighbor and bilinear interpolation" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+    <p class="prompt">
+      Nearest neighbor took 0.34s on my last run whereas bilinear took 1.52s, but you can see that diagonals are blurred to look smooth. Nearest neighbor runs faster but the image looks pretty pixelated.
+    </p>
+
+    <h3>Rectification</h3>
+    <p class="prompt">
+      Rectification is basically annotating the corners of a rectangle then mapping them onto a real rectangle to "flatten" out the surrounding image. Here's my attempt with a shake shack sign and the service box of a tennis court:
+    </p>
+    <div class="compare">
+      <figure>
+        <img src="images/a3_rect1_original.jpg" alt="Original photo 1 for rectification" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>Original</figcaption>
+      </figure>
+      <figure>
+        <img src="images/a3_rect1_rectified.jpg" alt="Photo 1 rectified" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>Rectified</figcaption>
+      </figure>
+      <figure>
+        <img src="images/a3_rect2_original.jpg" alt="Original photo 2 for rectification" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>Original</figcaption>
+      </figure>
+      <figure>
+        <img src="images/a3_rect2_rectified.jpg" alt="Photo 2 rectified" onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>Rectified</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="a4" class="part">
+    <h2>Blending into a Mosaic</h2>
+    <p class="prompt">
+      Here are the pictures I took earlier again, but this time as a mosaic! Here I chose the middle image of each set as the reference and warped the left and right images to line up with the middle. We used feathering to smooth out the connection between images which required zero padding at the edges (we forgot this at first which caused a hard seam).
+    </p>
+
+    <h3>Mosaic 1</h3>
+    <figure class="panel">
+      <img src="images/a4_mosaic1.jpg" alt="Mosaic 1" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <h3>Mosaic 2</h3>
+    <figure class="panel">
+      <img src="images/a4_mosaic2.jpg" alt="Mosaic 2" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <h3>Mosaic 3</h3>
+    <figure class="panel">
+      <img src="images/a4_mosaic3.jpg" alt="Mosaic 3" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <p class="prompt">
+      In this project I learned how to stitch together mosaics using homographies! Some things I learned were that misclicks could be super punishing (as one misaligned ledge in the first photo caused a distortion at first), moving things sometimes got distorted (you can see a faded red car in the last image), and that we have to do a lot of funky things to prevent seaming in the panoramas.
+    </p>
+  </section>
+</main>
+
+<footer>
+  <p>Keagan Aromin &middot; CS180 Project 4A &middot; October 2026</p>
+</footer>
+
+</body>
+</html>
