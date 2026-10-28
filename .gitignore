@@ -19,8 +19,8 @@ web/
 *.ipynb
 proj3a context/
 proj3b context/
-# proj4a course materials + raw photos (private / large)
-proj4a/lecture/
-proj4a/spec/
-proj4a/data/
-proj4a/tools/
+# proj4 course materials + raw photos (private / large)
+proj4/lecture/
+proj4/spec/
+proj4/data/
+proj4/tools/
