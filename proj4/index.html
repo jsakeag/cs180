@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Proj4A: Image Warping and Mosaicing | CS180</title>
+<title>Proj4: Image Warping, Mosaicing and Autostitching | CS180</title>
 <link rel="stylesheet" href="../assets/style.css">
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
 </head>
@@ -28,12 +28,13 @@
     <span class="tag">Homographies</span>
     <span class="tag">Image Warping</span>
     <span class="tag">Mosaics</span>
+    <span class="tag">Feature Matching</span>
   </div>
   <h1>Image Warping and Mosaicing</h1>
   <p class="excerpt">
     In this project we learned how to stitch panoramas together using homographies!
   </p>
-  <p class="article-meta">Keagan Aromin <span class="dot"></span> Project 4A <span class="dot"></span> October 2026</p>
+  <p class="article-meta">Keagan Aromin <span class="dot"></span> Project 4 <span class="dot"></span> November 2026</p>
 </div>
 
 <main>
@@ -166,10 +167,107 @@
       In this project I learned how to stitch together mosaics using homographies! Some things I learned were that misclicks could be super punishing (as one misaligned ledge in the first photo caused a distortion at first), moving things sometimes got distorted (you can see a faded red car in the last image), and that we have to do a lot of funky things to prevent seaming in the panoramas.
     </p>
   </section>
+
+  <hr class="divider">
+
+  <section id="b0" class="part">
+    <h2>Feature Matching for Autostitching</h2>
+    <p class="prompt">
+      Now, instead of clicking every correspondence by hand, we can auto-detect them using the paper we were assigned (MOPS by Brown, Szeliski and Winder).
+    </p>
+  </section>
+
+  <section id="b1" class="part">
+    <h2>Harris Corners and ANMS</h2>
+    <p class="prompt">
+      In lecture, we learned we can classify a corner as an area where a window changes a lot in every direction you can go (for an edge it wouldn't change much in the direction
+      along which the edge goes). Harris measures this with the second moment matrix \( M \).
+       If both eigenvalues are large, the window changes in every direction along the 2D plane meaning it must be a corner. We can use the score
+      \[ f = \frac{\det M}{\operatorname{tr} M} = \frac{\lambda_1 \lambda_2}{\lambda_1 + \lambda_2}, \]
+      which is large when both \( \lambda \)'s are large.
+    </p>
+    <p class="prompt">
+      The provided Harris code found 47,885 corners on one image, and many were in the grass or sky. By adding ANMS (below), we give corners a suppression radius:
+      \[ r_i = \min_j \lVert x_i - x_j \rVert \quad \text{s.t.} \quad f(x_i) &lt; 0.9\, f(x_j) \]
+      which keeps the corners spread out. We only keep the 500 corners with the largest radius.
+    </p>
+    <p class="prompt">
+      Comparing every pair of corners took too much memory, so I first kept the 20,000 strongest corners and processed them in chunks of 1,000.
+    </p>
+    <figure class="panel">
+      <img src="images/b1_harris_anms.jpg" alt="All Harris corners on the left, the 500 corners kept by ANMS on the right" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+  </section>
+
+  <section id="b2" class="part">
+    <h2>Feature Descriptors</h2>
+    <p class="prompt">
+      We then assign each corner a descriptor by blurring the image then sampling an 8&times;8 grid every 5 pixels from the 40&times;40 window around each corner.
+      Blurring makes the descriptor robust to Harris corners being off by 1-3 pixels. Each patch is then normalized to make them invariant to exposure
+      then flattened into a vector.
+    </p>
+    <figure class="panel">
+      <img src="images/b2_descriptors.jpg" alt="Six 40 by 40 windows around corners and their 8 by 8 normalized descriptors" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+  </section>
+
+  <section id="b3" class="part">
+    <h2>Feature Matching</h2>
+    <p class="prompt">
+      For every descriptor in one image, we take the nearest and second-nearest neighbor in the other image, then use Lowe's ratio test: keep the match only if
+      \[ \frac{e_{1\text{-NN}}}{e_{2\text{-NN}}} &lt; 0.5. \]
+      This rejects grass and repeated windows, because their best and second-best matches are about equally close, so the ratio is near 1.
+    </p>
+    <figure class="panel">
+      <img src="images/b3_matches_pano1.jpg" alt="Lines connecting matched features between two photos" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+    <p class="prompt">
+      13 of the 24 matches aligned with what I annotated in the first part. We need to use RANSAC to fix the mismatches.
+    </p>
+  </section>
+
+  <section id="b4" class="part">
+    <h2>RANSAC and Automatic Mosaics</h2>
+    <p class="prompt">
+      Least squares gets thrown off by bad matches, so RANSAC removes them through a "voting process." We pick 4 random matches, fit \( H \) to them, then count the
+      number of matches that fall within 4 pixels under that \( H \). 
+      If the 4 picks were all correct, lots of other matches agree. After 3,000 iterations we keep the \( H \) with the most inliers,
+      then refit with least squares on all of its inliers.
+    </p>
+    <figure class="panel">
+      <img src="images/b4_ransac_inliers.jpg" alt="RANSAC inliers in green and rejected outlier matches in red" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+    <p class="prompt">
+      First I tried 500 corners with a Lowe's ratio 0.5 which broke on one pair, so I tuned it to 1,500 corners with Lowe's ratio set to 0.6. Here every
+      pair landed within about 6-12 pixels (median) of my annotated points which was pretty accurate.
+    </p>
+    <p class="prompt">
+      Here's a comparison between the mosaics with manual and automatic stitching:
+    </p>
+
+    <h3>Mosaic 1</h3>
+    <figure class="panel">
+      <img src="images/b4_compare1.jpg" alt="Mosaic 1, manual versus automatic" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <h3>Mosaic 2</h3>
+    <figure class="panel">
+      <img src="images/b4_compare2.jpg" alt="Mosaic 2, manual versus automatic" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <h3>Mosaic 3</h3>
+    <figure class="panel">
+      <img src="images/b4_compare3.jpg" alt="Mosaic 3, manual versus automatic" onerror="this.closest('figure').classList.add('missing')">
+    </figure>
+
+    <p class="prompt">
+      The automatic versions are about as good as the manual ones. In mosaic 3, the cars and crosswalk line up just a bit better because RANSAC fits to over a hundred inliers instead of ten!
+    </p>
+  </section>
 </main>
 
 <footer>
-  <p>Keagan Aromin &middot; CS180 Project 4A &middot; October 2026</p>
+  <p>Keagan Aromin &middot; CS180 Project 4 &middot; November 2026</p>
 </footer>
 
 </body>
